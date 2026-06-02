@@ -34,5 +34,5 @@ Open terminal/command prompt in project folder:
 python -m pip install flask
 
 ### 3. Run the Application
- app.py
+python app.py
 ```
