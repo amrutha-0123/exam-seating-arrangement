@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Exam Seating Arrangement</title>
+    <style>
+        body { font-family: Arial; max-width: 800px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+        h1 { text-align: center; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .row { display: flex; gap: 10px; margin: 10px 0; align-items: center; }
+        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #3b82f6; color: white; }
+        .btn-success { background: #22c55e; color: white; }
+        .btn-secondary { background: #e5e7eb; }
+        .students { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0; }
+        .tag { padding: 4px 8px; border-radius: 4px; color: white; font-size: 12px; }
+        .grid { display: grid; gap: 5px; justify-content: center; margin-top: 20px; }
+        .seat { height: 60px; border-radius: 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 12px; color: white; }
+        .empty { background: #e5e7eb; color: #666; }
+        .CSE { background: #3b82f6; } .ECE { background: #22c55e; } 
+        .MECH { background: #f97316; } .CIVIL { background: #a855f7; } .EEE { background: #ec4899; }
+        .legend { display: flex; gap: 15px; justify-content: center; margin-top: 15px; font-size: 12px; }
+        .legend span { display: flex; align-items: center; gap: 5px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 3px; }
+        .error { color: red; text-align: center; }
+        .front { text-align: center; color: #666; font-size: 14px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Exam Seating Arrangement</h1>
+    
+    <div class="card">
+        <div class="row">
+            <label>Rows: <input type="number" id="rows" value="3" min="1" max="10" style="width:60px"></label>
+            <label>Cols: <input type="number" id="cols" value="4" min="1" max="10" style="width:60px"></label>
+        </div>
+        
+        <div class="row">
+            <input type="text" id="name" placeholder="Student name">
+            <select id="branch">
+                <option>CSE</option><option>ECE</option><option>MECH</option>
+                <option>CIVIL</option><option>EEE</option>
+            </select>
+            <button class="btn-primary" onclick="addStudent()">Add</button>
+        </div>
+        
+        <div class="row">
+            <button class="btn-secondary" onclick="loadSample()">Sample Data</button>
+            <button class="btn-secondary" onclick="clearAll()">Clear</button>
+            <button class="btn-success" onclick="solve()">Solve</button>
+        </div>
+        
+        <div class="students" id="studentList"></div>
+        <p class="error" id="error"></p>
+    </div>
+    
+    <div class="card" id="result" style="display:none">
+        <div class="front">FRONT</div>
+        <div class="grid" id="seatGrid"></div>
+        <div class="legend">
+            <span><div class="dot CSE"></div>CSE</span>
+            <span><div class="dot ECE"></div>ECE</span>
+            <span><div class="dot MECH"></div>MECH</span>
+            <span><div class="dot CIVIL"></div>CIVIL</span>
+            <span><div class="dot EEE"></div>EEE</span>
+        </div>
+    </div>
+
+    <script>
+        let students = [];
+        
+        function render() {
+            document.getElementById('studentList').innerHTML = students.map(s => 
+                `<span class="tag ${s.branch}">${s.name} (${s.branch})</span>`
+            ).join('');
+        }
+        
+        function addStudent() {
+            const name = document.getElementById('name').value.trim();
+            const branch = document.getElementById('branch').value;
+            if (name) {
+                students.push({ name, branch });
+                document.getElementById('name').value = '';
+                render();
+            }
+        }
+        
+        function loadSample() {
+            students = [
+                {name: 'Alice', branch: 'CSE'}, {name: 'Bob', branch: 'CSE'},
+                {name: 'Charlie', branch: 'ECE'}, {name: 'Diana', branch: 'ECE'},
+                {name: 'Eve', branch: 'MECH'}, {name: 'Frank', branch: 'CIVIL'}
+            ];
+            render();
+        }
+        
+        function clearAll() {
+            students = [];
+            render();
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('error').textContent = '';
+        }
+        
+        async function solve() {
+            if (!students.length) return;
+            document.getElementById('error').textContent = '';
+            
+            const res = await fetch('/solve', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    students,
+                    rows: parseInt(document.getElementById('rows').value),
+                    cols: parseInt(document.getElementById('cols').value)
+                })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                const cols = data.seats[0].length;
+                const grid = document.getElementById('seatGrid');
+                grid.style.gridTemplateColumns = `repeat(${cols}, 70px)`;
+                grid.innerHTML = data.seats.flat().map(s => s ? 
+                    `<div class="seat ${s.branch}"><div>${s.name}</div><div style="opacity:0.7">${s.branch}</div></div>` :
+                    `<div class="seat empty">Empty</div>`
+                ).join('');
+                document.getElementById('result').style.display = 'block';
+            } else {
+                document.getElementById('error').textContent = data.message;
+                document.getElementById('result').style.display = 'none';
+            }
+        }
+        
+        document.getElementById('name').addEventListener('keypress', e => e.key === 'Enter' && addStudent());
+    </script>
+</body>
+</html>
